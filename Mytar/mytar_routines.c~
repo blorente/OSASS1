@@ -101,11 +101,7 @@ readHeader(FILE * tarFile, stHeaderEntry ** header, int *nFiles)
 int
 createTar(int nFiles, char *fileNames[], char tarName[])
 {
-	//Get the next filename
-	char* filename = null;
-
-	getNextFilename(fileNames, filename);
-
+	// Complete the function
 	return EXIT_FAILURE;
 }
 
