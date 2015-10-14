@@ -89,6 +89,7 @@ loadstr(FILE * file, char **buf)
 
 	(*buf) = string;
 
+	if (byteRead == EOF) {return -1;}
 	return 0;
 }
 
@@ -106,6 +107,8 @@ loadstr(FILE * file, char **buf)
 int
 readHeader(FILE * tarFile, stHeaderEntry ** header, int *nFiles)
 {
+	int error = 0;
+
 	int numFiles = 0;
 	fread(&numFiles, sizeof(int), 1, tarFile);
 
@@ -116,13 +119,15 @@ readHeader(FILE * tarFile, stHeaderEntry ** header, int *nFiles)
 	for (index = 0; index < numFiles; index++) {
 		
 		//Read Header
-		loadstr(tarFile, &headers[index].name);
+		error = loadstr(tarFile, &headers[index].name);
 		fread(&headers[index].size, sizeof(int), 1, tarFile);
 
 	}
+	if (error < 0 || feof(tarFile)) {return EXIT_FAILURE;}
 
+	//Start return procedures
 	(*header) = headers;
-	(*nFiles) = numFiles;
+	(*nFiles) = numFiles;	
 	
 	return EXIT_SUCCESS;
 }
@@ -152,7 +157,8 @@ readHeader(FILE * tarFile, stHeaderEntry ** header, int *nFiles)
 int
 createTar(int nFiles, char *fileNames[], char tarName[])
 {
-
+	int error = 0;
+	
 	stHeaderEntry headers[nFiles];
 	FILE* tarWritingPtr =  fopen(tarName, "w");
 
@@ -162,7 +168,7 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 	for (; i < nFiles; i++) {
 		offset += strlen(fileNames[i]) + 1;
 	}
-	if (fseek(tarWritingPtr, offset, SEEK_SET) < 0) {return EXIT_FAILURE;}
+	if (fseek(tarWritingPtr, offset, SEEK_SET) < 0) {error = -1;}
 
 	//Copy the data and get the header information
 	int t;
@@ -174,16 +180,15 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 
 		//Open the file to be copied
 		FILE* original = fopen(headers[t].name, "r");
-		if (original == NULL) { return EXIT_FAILURE; }
+		if (original == NULL) { error = -1; }
 
 		//Actually copy the file contents
 		headers[t].size = copynFile(original, tarWritingPtr, INT_MAX);
 
-
 		if (headers[t].size != -1) {
 			offset += headers[t].size;
 		} else {
-			return EXIT_FAILURE;
+			error = -1;
 		}
 		
 		
@@ -192,7 +197,7 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 
 	//Write the header
 	
-	if (fseek(tarWritingPtr, 0, SEEK_SET) < 0) {return EXIT_FAILURE;}
+	if (fseek(tarWritingPtr, 0, SEEK_SET) < 0) {error = -1;}
 	fwrite(&nFiles, sizeof(int), 1, tarWritingPtr); //Number of files
 
 	for(t = 0; t < nFiles; t++) { //Headers
@@ -210,6 +215,7 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 	}
 	fclose(tarWritingPtr);
 	
+	if (error == -1) { return EXIT_FAILURE;}
 	return EXIT_SUCCESS;
 }
 
@@ -230,13 +236,13 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 int
 extractTar(char tarName[])
 {
-	
+	int error = 0;
 	int numFiles = 0;
 	stHeaderEntry *headers = NULL;
 	//Open file for reading
 	FILE *tarFile = fopen(tarName, "r");
 	//Read the header
-	readHeader(tarFile, &headers, &numFiles);
+	error = readHeader(tarFile, &headers, &numFiles);
 
 	//Display the header info
 	printf("Header read correctly... Displaying info: \n");
@@ -248,7 +254,7 @@ extractTar(char tarName[])
 	//Create separate files and copy the contents from the tar.
 	for (index = 0; index < numFiles; index++) {
 		FILE *destination = fopen(headers[index].name, "w");
-		copynFile(tarFile, destination, headers[index].size);
+		error = copynFile(tarFile, destination, headers[index].size);
 		fclose(destination);
 
 		printf("Created file %s, with size %d.\n", headers[index].name, headers[index].size);
@@ -257,6 +263,7 @@ extractTar(char tarName[])
 	//Close files and free up memory
 	fclose(tarFile);
 	free(headers);
-
+	
+	if (error == EXIT_FAILURE || error == -1) {return EXIT_FAILURE;}
 	return EXIT_SUCCESS;
 }
