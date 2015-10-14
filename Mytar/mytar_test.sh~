@@ -3,7 +3,7 @@
 #Build the project OK
 make
 echo "Project built successfully."
-fi
+
 
 #Get files to test OK
 cd test
@@ -34,6 +34,6 @@ done
 cd ..
 rm -rf /tmp
 
-#make clean
+make clean
 
 return 0
