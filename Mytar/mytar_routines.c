@@ -166,7 +166,7 @@ createTar(int nFiles, char *fileNames[], char tarName[])
 	int offset = sizeof(int);
 	int i = 0;
 	for (; i < nFiles; i++) {
-		offset += strlen(fileNames[i]) + 1;
+		offset += strlen(fileNames[i]) + sizeof(char) + sizeof(int);
 	}
 	if (fseek(tarWritingPtr, offset, SEEK_SET) < 0) {error = -1;}
 

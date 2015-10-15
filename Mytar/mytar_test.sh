@@ -1,39 +1,66 @@
 #!/bin/bash
 
-#Build the project OK
-make
-echo "Project built successfully."
+#Look for mytar
+teststr=$( ls mytar )
+if test -z $teststr ; then
+	echo "Mytar not found, nothing to test!"
+	exit
+else 
+	echo "Mytar program found. Testing..."
+fi
 
+#Delete tmp if it exists
+if test -d tmp ; then
+	echo "tmp folder found. Removing..."
+	echo "rm -r tmp"
+	rm -r tmp
+else 
+	echo "tmp folder not found."
+fi
 
-#Get files to test OK
-cd test
-files=$( ls )
-cd ..
-echo "Files to be tarred: " $files
-
-#Execute mytar
+#Create and switch to tmp
 mkdir tmp
-./mytar -c -f /tmp/out.tar $files
-
-#Change directories to temp
 cd tmp
 
-#Untar the files here
-#../mytar -x -f out.tar
+#Create files inside tmp
+echo "Creating the temporary files for testing..."
+echo "Hello world!" > file1.txt
+head -n 10 /etc/passwd > file2.txt
+head -c 1024 /dev/urandom > file3.dat
 
-#Compare the files with the originals
-#for file in $( ls ) do
+#Create the tar
+files=$( ls )
+../mytar -c -f filetar.mtar $files
 
-#	if [ diff $file ../$file ] ; then
-#		echo "File " $file " untarred successfully."
-#	else
-#		echo "There was an error when untarring " $file "."
-#	fi
-#done
-#Delete temporal files and clean the project
-#cd ..
-#rm -rf /tmp
+teststr=$( ls filetar.mtar )
+if test -z $teststr ; then 
+	echo "There was an error when creating the file. So sorry."
+	exit
+else
+	echo "Tar file created succesfully."
+fi
 
-make clean
+#Create out directory and copy filetar to it
+mkdir out
+cat filetar.mtar > out/filetar.mtar
 
-return 0
+#Switch to /out and extract tar
+cd out
+../../mytar -x -f filetar.mtar
+
+echo "Performing test..."
+echo " "
+
+for i in $( ls )
+do
+	result=$( diff $i ../$i )
+	if [ "$result" != "" ] ; then
+		echo "The file $i does not coincide. Ending program..."
+		exit
+	fi
+done	
+
+cd ../..
+echo "Success"
+
+exit
